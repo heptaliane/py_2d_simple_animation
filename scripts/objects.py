@@ -19,12 +19,11 @@ class Object(object):
 class Ball(Object):
     def __init__(self, move, region, r, **kwargs):
         super().__init__(move, region, **kwargs)
-        print('r = %f' % r)
         self.r = r
-        self._prev = self._region.get_closest_line(self._move.coord)
+        self._prev = self._region.get_closest_line(self._move.get_coord())
 
-    def _check_collision(self):
-        line1, r1 = self._region.get_closest_line(self._move.coord)
+    def _check_collision(self, coord):
+        line1, r1 = self._region.get_closest_line(coord)
         line2, r2 = self._prev
 
         if r1 <= self.r < r2:
@@ -34,16 +33,17 @@ class Ball(Object):
         return None
 
     def __call__(self, dt):
-        self._move(dt)
-        line = self._check_collision()
+        coord = self._move(dt)
+        line = self._check_collision(coord)
         if line is not None:
-            self._move.coord = line.get_symmetry_point(self._move.coord,
-                                                       margin=self.r)
-            self._move.velocity = line.get_reflect_vector(self._move.velocity)
+            coord = line.get_symmetry_point(coord, margin=self.r)
+            self._move.set_coord(coord)
+            velocity = line.get_reflect_vector(self._move.get_velocity())
+            self._move.set_velocity(velocity)
 
         t = np.asarray(range(self.samples)) * 2 * math.pi / (self.samples - 1)
-        xs = np.cos(t) * self.r + self._move.coord[0]
-        ys = np.sin(t) * self.r + self._move.coord[1]
+        xs = np.cos(t) * self.r + coord[0]
+        ys = np.sin(t) * self.r + coord[1]
         return (xs, ys)
 
 
@@ -53,9 +53,14 @@ class Trace(Object):
         self._trace = list()
 
     def __call__(self, dt):
-        self._trace.append(self._obj._move.coord)
+        self._trace.append(self._obj._move.get_coord())
         return np.asarray(self._trace, dtype=np.float32).T
 
+
+class Particle(Object):
+    def __call__(self, dt):
+        self._move(dt)
+        return self._move.coord
 
 class Area(Object):
     def __init__(self, move, region):
