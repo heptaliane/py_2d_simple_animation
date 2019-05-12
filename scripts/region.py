@@ -99,8 +99,8 @@ class Line(object):
 
     def get_reflect_vector(self, v):
         n = self._n
-        A = np.asarray((n * [1, -1], n[::-1]), dtype=np.float32)
-        Ainv = np.asarray((n, n[::-1] * [-1, 1]), dtype=np.float32)
+        A = np.asarray((n, n[::-1] * [-1, 1]), dtype=np.float32)
+        Ainv = np.asarray((n * [1, -1], n[::-1]), dtype=np.float32)
         v = (A @ v) * [-1, 1]
         return Ainv @ v
 
