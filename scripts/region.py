@@ -69,11 +69,15 @@ class Domain(object):
 
 
 class Line(object):
-    def __init__(self, a1=1, a2=1, b=0, domain=None):
+    def __init__(self, a1=1, a2=1, b=0, domain=None, yrange=None):
         a = np.asarray([a1, a2], dtype=np.float32)
         self._n = a / np.sqrt(a @ a)
         self._b = b / np.sqrt(a @ a)
         self.domain = Domain() if domain is None else domain
+        self.yrange = Domain() if yrange is None else yrange
+
+    def __contains__(self, coord):
+        return self.domain(coord[0]) and self.yrange(coord[1])
 
     def __call__(self, x):
         if not self.domain(x):
@@ -121,19 +125,20 @@ class Line(object):
         return v1 * v2 <= 0
 
     def __str__(self):
-        return '%4.3ex + %4.3ey + %4.3e = 0' % (*self._n, self._b)
+        return '%.3fx + %.3fy + %.3f = 0' % (*self._n, self._b)
 
 
 def get_line_from_coords(coord1, coord2):
     a1 = coord1[1] - coord2[1]
     a2 = -(coord1[0] - coord2[0])
     b = coord1[0] * coord2[1] - coord1[1] * coord2[0]
-    domain = Domain(coord1[0], coord2[0])
+    domain = None if a2 == 0.0 else Domain(coord1[0], coord2[0])
+    yrange = Domain(coord1[1], coord2[1]) if a2 == 0.0 else None
 
     if a2 < 0:
-        return Line(a1=-a1, a2=-a2, b=-b, domain=domain)
+        return Line(a1=-a1, a2=-a2, b=-b, domain=domain, yrange=yrange)
     else:
-        return Line(a1=a1, a2=a2, b=b, domain=domain)
+        return Line(a1=a1, a2=a2, b=b, domain=domain, yrange=yrange)
 
 
 def get_line_from_gradient(gradient, coord, domain=None):
@@ -155,7 +160,7 @@ class Region(object):
 
     def __contains__(self, coord):
         is_contain = False
-        for line in filter(lambda l: l.domain(coord[0]), self.lines):
+        for line in filter(lambda l: coord in l, self.lines):
             if line(coord[0]) >= coord[1]:
                 is_contain = not is_contain
         return is_contain
@@ -176,7 +181,7 @@ class Region(object):
         closest_distance = np.inf
         closest = None
 
-        for line in self.lines:
+        for line in filter(lambda l: coord in l, self.lines):
             distance = line.get_distance(*coord)
             if distance < closest_distance:
                 closest_distance = distance

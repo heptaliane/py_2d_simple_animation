@@ -3,6 +3,8 @@
 from abc import ABCMeta, abstractmethod
 import numpy as np
 
+from trigger import NullTrigger
+
 
 class Move(object):
     def __init__(self, coord=[0, 0]):
@@ -63,3 +65,22 @@ class AttenuateMove(StandardMove):
 
     def set_velocity(self, velocity):
         super().set_velocity(velocity * self._elasticity)
+
+
+class TriggeredMove(AttenuateMove):
+    def __init__(self, coord, velocity=[0, 0], accel=[0, 0],
+                 elasticity=1.0, gamma=0):
+        super().__init__(coord, velocity, accel, elasticity, gamma)
+        self._start_trigger = NullTrigger(True)
+        self._end_trigger = NullTrigger(False)
+
+    def set_trigger(self, start=None, end=None):
+        if start is not None:
+            self._start_trigger = start
+        if end is not None:
+            self._end_trigger = end
+
+    def __call__(self, dt):
+        if self._start_trigger and not self._end_trigger:
+            super().__call__(dt)
+        return self._coord.copy()
