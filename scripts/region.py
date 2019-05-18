@@ -38,28 +38,36 @@ class Domain(object):
             self : ------@@@@@@-----------------
             other: ----------------@@@@---------
         '''
-        return self._range[1] < other._range[0]
+        if isinstance(other, Domain):
+            return self._range[1] < other._range[0]
+        return self._range[1] < other
 
     def __le__(self, other):
         '''
             self : -----@@@@@@@@@@--------------
             other: ----------@@@@@@@@@@@@-------
         '''
-        return np.all(self._range <= other._range)
+        if isinstance(other, Domain):
+            return np.all(self._range <= other._range)
+        return self._range[1] <= other
 
     def __gt__(self, other):
         '''
             self : ---------------@@@@@@@-------
             other: -----@@@@@@------------------
         '''
-        return other._range[1] < self._range[0]
+        if isinstance(other, Domain):
+            return other._range[1] < self._range[0]
+        return other < self._range[0]
 
     def __ge__(self, other):
         '''
             self : ----------@@@@@@@@-----------
             other : -----@@@@@@@@---------------
         '''
-        return np.all(self._range >= other._range)
+        if isinstance(other, Domain):
+            return np.all(self._range >= other._range)
+        return other <= self._range[0]
 
     def __getitem__(self, idx):
         return self._range[idx]
@@ -80,7 +88,7 @@ class Line(object):
         return self.domain(coord[0]) and self.yrange(coord[1])
 
     def __call__(self, x):
-        if not self.domain(x):
+        if not self.domain(x) or self._n[1] == 0:
             return np.nan
         return -(self._n[0] * x + self._b) / self._n[1]
 
@@ -161,6 +169,8 @@ class Region(object):
     def __contains__(self, coord):
         is_contain = False
         for line in filter(lambda l: coord in l, self.lines):
+            if np.isnan(line(coord[0])):
+                continue
             if line(coord[0]) >= coord[1]:
                 is_contain = not is_contain
         return is_contain

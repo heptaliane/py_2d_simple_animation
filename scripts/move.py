@@ -20,10 +20,13 @@ class Move(object):
     def get_coord(self):
         return self._coord.copy()
 
+    def copy(self):
+        return StableMove(self._coord.copy())
+
 
 class StableMove(Move):
     def __call__(self, dt):
-        return self.coord.copy()
+        return self._coord.copy()
 
 
 class StandardMove(Move):
@@ -49,6 +52,10 @@ class StandardMove(Move):
     def get_accel(self):
         return self._accel.copy()
 
+    def copy(self):
+        return StandardMove(self._coord.copy(), self._velocity.copy(),
+                            self._accel.copy())
+
 
 class AttenuateMove(StandardMove):
     def __init__(self, coord, velocity=[0, 0], accel=[0, 0],
@@ -63,16 +70,25 @@ class AttenuateMove(StandardMove):
         self._velocity = self._velocity * amp + self._accel * dt
         return self._coord.copy()
 
-    def set_velocity(self, velocity):
-        super().set_velocity(velocity * self._elasticity)
+    def set_velocity(self, velocity, use_elasticity=True):
+        velocity = np.asarray(velocity, dtype=np.float32)
+        if use_elasticity:
+            super().set_velocity(velocity * self._elasticity)
+        else:
+            super().set_velocity(velocity)
+
+    def copy(self):
+        return AttenuateMove(self._coord.copy(), self._velocity.copy(),
+                             self._accel.copy(), self._elasticity, self._gamma)
 
 
 class TriggeredMove(AttenuateMove):
     def __init__(self, coord, velocity=[0, 0], accel=[0, 0],
                  elasticity=1.0, gamma=0):
         super().__init__(coord, velocity, accel, elasticity, gamma)
-        self._start_trigger = NullTrigger(True)
-        self._end_trigger = NullTrigger(False)
+        self._start_trigger = NullTrigger(state=True)
+        self._end_trigger = NullTrigger(state=False)
+        self._action = list()
 
     def set_trigger(self, start=None, end=None):
         if start is not None:
@@ -80,7 +96,29 @@ class TriggeredMove(AttenuateMove):
         if end is not None:
             self._end_trigger = end
 
+    def add_action_trigger(self, trig, action):
+        self._action.append((trig, action))
+
     def __call__(self, dt):
+        for trig, action in filter(lambda d: d[0], self._action):
+            action()
         if self._start_trigger and not self._end_trigger:
             super().__call__(dt)
         return self._coord.copy()
+
+    def copy(self):
+        move = TriggeredMove(self._coord, self._velocity, self._accel,
+                             self._elasticity, self._gamma)
+        move.set_trigger(self._start_trigger, self._end_trigger)
+        return move
+
+
+class TraceMove(Move):
+    def __init__(self, trace):
+        self.trace = trace
+
+    def __call__(self, dt):
+        return self.trace()
+
+    def copy(self):
+        return TraceMove(self.trace.copy())

@@ -6,14 +6,14 @@ from matplotlib.animation import FuncAnimation
 
 class BaseDrawer(object):
     def __init__(self, filename='output', xlim=[-1, 1],
-                 ylim=[-1, 1], aspect=1, dt=0.02):
+                 ylim=[-1, 1], dt=0.02):
         self.fig = plt.figure()
         self._ax = self.fig.add_subplot(111)
         self._ax.set_xlim(*xlim)
         self._ax.set_ylim(*ylim)
         self._ax.tick_params(labelbottom=False, bottom=False)
         self._ax.tick_params(labelleft=False, left=False)
-        self._ax.set_aspect(aspect)
+        self._ax.set_aspect((ylim[1] - ylim[0]) / (xlim[1] - xlim[0]))
         for k in ('left', 'right', 'top', 'bottom'):
             self._ax.spines[k].set_visible(False)
         self._obj = list()
