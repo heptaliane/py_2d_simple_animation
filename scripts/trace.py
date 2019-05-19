@@ -6,13 +6,20 @@ import matplotlib.pyplot as plt
 
 
 class BasicTrace(object):
-    def __init__(self, coords):
+    def __init__(self, coords, repeat=True):
         self.coords = np.asarray(coords, dtype=np.float32)
+        self.repeat = repeat
         self._idx = 0
 
     def __call__(self):
-        coord = self.coords[self._idx]
-        self._idx = (self._idx + 1) % len(self.coords)
+        if self._idx < len(self.coords):
+            coord = self.coords[self._idx]
+        elif self.repeat:
+            idx = self._idx % len(self.coords)
+            coord = self.coords[idx]
+        else:
+            coord = self.coords[len(self.coords) - 1]
+        self._idx += 1
         return coord
 
 

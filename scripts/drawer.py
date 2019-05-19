@@ -24,6 +24,9 @@ class BaseDrawer(object):
         canvas, = self._ax.plot([], [], color=color)
         self._obj.append((obj, canvas))
 
+    def draw_stable_object(self, xs, ys, color='r'):
+        self._ax.plot(xs, ys, color=color)
+
     def update(self, frame):
         layers = list()
         for obj, canvas in self._obj:
@@ -34,6 +37,7 @@ class BaseDrawer(object):
         return layers
 
     def start(self, frames=1000, interval=20):
+        self._frames = frames
         self.animation = FuncAnimation(self.fig, self.update,
                                        frames=frames, interval=interval)
 
@@ -45,6 +49,12 @@ class WindowDrawer(BaseDrawer):
 
 
 class MP4Drawer(BaseDrawer):
+    def update(self, frame):
+        super().update(frame)
+        print(frame)
+        if frame % (self._frames // 100) == 0:
+            print('%6d / %6d frames' % (frame, self._frames))
+
     def start(self, **kwargs):
         super().start(**kwargs)
         self.animation.save('%s.mp4' % self.filename, writer='ffmpeg')

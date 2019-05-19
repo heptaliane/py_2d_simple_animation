@@ -13,7 +13,7 @@ from trigger import ToggleTrigger
 
 class ScenePalabolaTrace(BasicTrace):
     def __init__(self, coord, velocity, directions, height, base=0.0,
-                 margin=0.1, wait=20, **kwargs):
+                 margin=0.1, wait=20, target_range=Domain(), **kwargs):
         self._directions = directions
         self._speed = velocity
         self._height = height
@@ -23,6 +23,7 @@ class ScenePalabolaTrace(BasicTrace):
         self._dir_idx = 0
         self._idx = 0
         self.wait = wait
+        self._target_range = target_range
         self._update_trace(coord)
 
     def _update_trace(self, coord):
@@ -39,12 +40,12 @@ class ScenePalabolaTrace(BasicTrace):
         for i in range(2, len(x)):
             if x[i][1] < self._height and x[i - 1][1] > self._height:
                 d = abs(x[i][0] - coord[0])
-                if d <= mind:
+                if d <= mind and x[i][0] in target_range:
                     target = i
                     mind = d
             elif x[i][1] > self._height and x[i - 1][1] < self._height:
                 d = abs(x[i - 1][0] - coord[0])
-                if d <= mind:
+                if d <= mind and x[i][0] in target_range:
                     target = i - 1
                     mind = d
 
@@ -92,6 +93,7 @@ class ChaseParabolaTrace(BasicTrace):
             coord = self.coords[self._idx]
         else:
             coord = self.coords[len(self.coords) - 1]
+            print(coord)
         self._idx += 1
 
         if self._idx >= self._parabola.wait + len(self.coords):
@@ -129,23 +131,30 @@ class Polynomics(object):
 
 
 if __name__ == '__main__':
-    dt = 0.02
     v = 1.0
-    d = (np.asarray([0.1, 0.15, 0.2, 0.3, 0.35]) + 0.5) * math.pi
+    d = (np.asarray([0.35, 0.2, 0.1, 0.3, 0.15]) + 0.5) * math.pi
     r = 0.1
     l = 0.3
     x0 = 3.0
     lim = [0.5, 4.0]
+    interval = 20
+    sec = 20
+    name = 'output/scene01'
 
+    dt = interval * 0.001
     h = 0.5 * math.sqrt(3.0) * l
     dh = 0.5 * math.sqrt(3.0) * r
     dx = np.asarray([[-0.5 * l, -h], [0.5 * l, h], [1.5 * l, -h]],
                     dtype=np.float32)
     dx = dx + [0.5 * r, -dh]
+    target_range = Domain(lim[1] - 1.5 * l, lim[0] + 0.5 * l)
 
-    drawer = WindowDrawer(xlim=[0.0, 4.0], ylim=[-0.1, 3.0], dt=dt)
+    # drawer = WindowDrawer(xlim=[-0.1, 4.0], ylim=[-0.1, 3.0], dt=dt)
+    drawer = MP4Drawer(filename=name, xlim=[-0.1, 4.0], ylim=[-0.1, 3.0],
+                       dt=dt)
 
     btrace = ScenePalabolaTrace([x0, h], v, d, h, dh, lim=lim)
+    # btrace = ScenePalabolaTrace([x0, h], v, d, h, dh, lim=lim, dt=dt)
     ntrace = ChaseParabolaTrace(btrace)
     bmove = TraceMove(btrace)
     nmove = TraceMove(ntrace)
@@ -154,4 +163,8 @@ if __name__ == '__main__':
 
     drawer.add_object(ball)
     drawer.add_object(tri, color='b')
-    drawer.start()
+    drawer.draw_stable_object([0.0, 0.5 - r, 0.5 - r, 0.0, 0.0],
+                              [0.0, 0.0, 2.0, 2.0, 0.0],
+                              color='k')
+    # drawer.start(frames=int(sec / interval) * 1000, interval=interval)
+    drawer.start(frames=986, interval=interval)
